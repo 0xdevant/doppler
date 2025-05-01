@@ -49,7 +49,6 @@ contract BaseTest is Test, Deployers {
     }
 
     // Constants
-
     uint256 constant DEFAULT_NUM_TOKENS_TO_SELL = 600_000_000 ether;
     uint256 constant DEFAULT_MINIMUM_PROCEEDS = 6.65 ether;
     uint256 constant DEFAULT_MAXIMUM_PROCEEDS = 10 ether;
