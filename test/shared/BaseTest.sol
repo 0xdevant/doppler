@@ -59,9 +59,10 @@ contract BaseTest is Test, Deployers {
     uint256 constant DEFAULT_STARTING_TIME = 1 days;
     // uint256 constant DEFAULT_ENDING_TIME = 2 days;
     uint256 constant DEFAULT_ENDING_TIME = DEFAULT_STARTING_TIME + 10 hours;
+    uint256 constant SALE_DURATION = 10 hours;
 
     // int24 constant DEFAULT_GAMMA = 18850;
-    int24 constant DEFAULT_GAMMA = 26_630;
+    int24 constant DEFAULT_GAMMA = 54_670;
     // int24 constant DEFAULT_GAMMA = 800;
     uint256 constant DEFAULT_EPOCH_LENGTH = 400 seconds;
 
@@ -76,7 +77,7 @@ contract BaseTest is Test, Deployers {
     // int24 constant DEFAULT_START_TICK = -184_210;
     // int24 constant DEFAULT_END_TICK = 353_810;
     int24 constant DEFAULT_START_TICK = -161_180;
-    int24 constant DEFAULT_END_TICK = 400_780;
+    int24 constant DEFAULT_END_TICK = 330_780;
 
     address constant TOKEN_A = address(0x8888);
     address constant TOKEN_B = address(0x9999);
