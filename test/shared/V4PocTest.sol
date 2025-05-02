@@ -21,7 +21,7 @@ using StateLibrary for IPoolManager;
 contract V4PocTest is DopplerLensTest {
     function test_v4_EmptyEpochsForHalfSale_ThenBuy1ETH() public _deployLensQuoter {
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
         uint256 oriTokenBalance = IERC20(asset).balanceOf(address(this));
@@ -30,9 +30,9 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
         console.log("\n");
         console.log("numeraire ", numeraire);
         console.log("asset ", asset);
@@ -43,7 +43,7 @@ contract V4PocTest is DopplerLensTest {
         // no buys for N epochs
         uint256 totalEpochs = 90;
         uint256 skipNumOfEpochs = totalEpochs / 2;
-        vm.warp(hook.getStartingTime() + hook.getEpochLength() * skipNumOfEpochs);
+        vm.warp(hook.startingTime() + hook.epochLength() * skipNumOfEpochs);
 
         // buyExactOut(1);
 
@@ -92,9 +92,9 @@ contract V4PocTest is DopplerLensTest {
 
     function test_v4_buyMaxProceedAtFirstEpoch() public _deployLensQuoter {
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
-        int256 maximumProceeds = int256(hook.getMaximumProceeds());
+        int256 maximumProceeds = int256(hook.maximumProceeds());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -102,9 +102,9 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
 
         (uint256 tokenBought,) = buy(-maximumProceeds);
 
@@ -144,7 +144,7 @@ contract V4PocTest is DopplerLensTest {
         buyBackEtherAmount = bound(buyBackEtherAmount, 0.55 ether, amount / 2);
 
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
         uint256 oriTokenBalance = IERC20(asset).balanceOf(address(this));
@@ -153,15 +153,15 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
 
         // no buys for N epochs
         uint256 skipNumOfEpochs = 5;
         uint256 tradeNum = 10;
 
-        vm.warp(hook.getStartingTime() + hook.getEpochLength() * skipNumOfEpochs);
+        vm.warp(hook.startingTime() + hook.epochLength() * skipNumOfEpochs);
 
         // consecutive trades in each epoch
         for (uint256 i; i < tradeNum; i++) {
@@ -205,7 +205,7 @@ contract V4PocTest is DopplerLensTest {
             console.log("token / ETH (sqrtPriceX96)", tokenPerOneETH);
             console.log("current epoch", hook.getCurrentEpoch());
 
-            vm.warp(hook.getStartingTime() + hook.getEpochLength() * (skipNumOfEpochs + i + 1)); // go to next epoch
+            vm.warp(hook.startingTime() + hook.epochLength() * (skipNumOfEpochs + i + 1)); // go to next epoch
         }
 
         vm.prank(hook.initializer());
@@ -217,7 +217,7 @@ contract V4PocTest is DopplerLensTest {
 
     function test_buy_EmptyEpochsForHalfSale_HalfSameSizeUntilMaxProceed() public _deployLensQuoter {
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -225,9 +225,9 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
 
         // no buys for N epochs
         uint256 halfOfSaleEpochs = SALE_DURATION / DEFAULT_EPOCH_LENGTH / 2; // 45
@@ -235,7 +235,7 @@ contract V4PocTest is DopplerLensTest {
 
         // console.log("buyEthAmount", buyEthAmount);
 
-        vm.warp(hook.getStartingTime() + hook.getEpochLength() * halfOfSaleEpochs);
+        vm.warp(hook.startingTime() + hook.epochLength() * halfOfSaleEpochs);
 
         // consecutive buy in each epoch
         for (uint256 i; i < halfOfSaleEpochs; i++) {
@@ -273,7 +273,7 @@ contract V4PocTest is DopplerLensTest {
             console.log("isEarlyExit", hook.earlyExit());
             console.log("current epoch", hook.getCurrentEpoch());
 
-            vm.warp(hook.getStartingTime() + hook.getEpochLength() * (halfOfSaleEpochs + i + 1)); // go to next epoch
+            vm.warp(hook.startingTime() + hook.epochLength() * (halfOfSaleEpochs + i + 1)); // go to next epoch
         }
 
         vm.prank(hook.initializer());
@@ -285,7 +285,7 @@ contract V4PocTest is DopplerLensTest {
 
     function test_buy_60EmptyEpochs_30EpochsSameSizeUntilMaxProceed() public _deployLensQuoter {
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -293,16 +293,16 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
 
         // no buys for N epochs
         uint256 skipNumOfEpochs = 60;
         uint256 tradeNum = 30;
         uint256 buyEthAmount = DEFAULT_MAXIMUM_PROCEEDS / tradeNum + 1;
 
-        vm.warp(hook.getStartingTime() + hook.getEpochLength() * skipNumOfEpochs);
+        vm.warp(hook.startingTime() + hook.epochLength() * skipNumOfEpochs);
 
         // consecutive buy in each epoch
         for (uint256 i; i < tradeNum; i++) {
@@ -347,7 +347,7 @@ contract V4PocTest is DopplerLensTest {
             console.log("isEarlyExit", hook.earlyExit());
             console.log("current epoch", hook.getCurrentEpoch());
 
-            vm.warp(hook.getStartingTime() + hook.getEpochLength() * (skipNumOfEpochs + i + 1)); // go to next epoch
+            vm.warp(hook.startingTime() + hook.epochLength() * (skipNumOfEpochs + i + 1)); // go to next epoch
         }
 
         vm.prank(hook.initializer());
@@ -359,7 +359,7 @@ contract V4PocTest is DopplerLensTest {
 
     function test_buy_70emptyEpochs_20EpochsSameSizeUntilMaxProceed() public _deployLensQuoter {
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -367,16 +367,16 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
 
         // no buys for N epochs
         uint256 skipNumOfEpochs = 70;
         uint256 tradeNum = 20;
         uint256 buyEthAmount = DEFAULT_MAXIMUM_PROCEEDS / tradeNum + 1;
 
-        vm.warp(hook.getStartingTime() + hook.getEpochLength() * skipNumOfEpochs);
+        vm.warp(hook.startingTime() + hook.epochLength() * skipNumOfEpochs);
 
         // consecutive buy in each epoch
         for (uint256 i; i < tradeNum; i++) {
@@ -412,7 +412,7 @@ contract V4PocTest is DopplerLensTest {
             console.log("isEarlyExit", hook.earlyExit());
             console.log("current epoch", hook.getCurrentEpoch());
 
-            vm.warp(hook.getStartingTime() + hook.getEpochLength() * (skipNumOfEpochs + i + 1)); // go to next epoch
+            vm.warp(hook.startingTime() + hook.epochLength() * (skipNumOfEpochs + i + 1)); // go to next epoch
         }
 
         vm.prank(hook.initializer());
@@ -424,7 +424,7 @@ contract V4PocTest is DopplerLensTest {
 
     function test_buy_EveryEpochUntilMaxProceed() public _deployLensQuoter {
         // Go to starting time
-        vm.warp(hook.getStartingTime());
+        vm.warp(hook.startingTime());
 
         (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -432,9 +432,9 @@ contract V4PocTest is DopplerLensTest {
         console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
         console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
         console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-        console.log("starting tick", hook.getStartingTick());
-        console.log("ending tick", hook.getEndingTick());
-        console.log("gamma", hook.getGamma());
+        console.log("starting tick", hook.startingTick());
+        console.log("ending tick", hook.endingTick());
+        console.log("gamma", hook.gamma());
 
         uint256 tradeNum = 14;
 
@@ -480,7 +480,7 @@ contract V4PocTest is DopplerLensTest {
             console.log("isEarlyExit", hook.earlyExit());
             console.log("current epoch", hook.getCurrentEpoch());
 
-            vm.warp(hook.getStartingTime() + hook.getEpochLength() * (tradeNum + i + 1)); // go to next epoch
+            vm.warp(hook.startingTime() + hook.epochLength() * (tradeNum + i + 1)); // go to next epoch
         }
 
         vm.prank(hook.initializer());
@@ -492,7 +492,7 @@ contract V4PocTest is DopplerLensTest {
 
     // function test_buy_24hrSale_HalfEmptyEpoch_HalfSameSizeUntilMaxProceed() public _deployLensQuoter {
     //     // Go to starting time
-    //     vm.warp(hook.getStartingTime());
+    //     vm.warp(hook.startingTime());
 
     //     (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -500,18 +500,18 @@ contract V4PocTest is DopplerLensTest {
     //     console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
     //     console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
     //     console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-    //     console.log("starting tick", hook.getStartingTick());
-    //     console.log("ending tick", hook.getEndingTick());
-    //     console.log("gamma", hook.getGamma());
+    //     console.log("starting tick", hook.startingTick());
+    //     console.log("ending tick", hook.endingTick());
+    //     console.log("gamma", hook.gamma());
 
     //     // no buys for N epochs
     //     uint256 totalEpochs = 216;
     //     uint256 halfOfEpoch = totalEpochs / 2;
     //     uint256 buyEthAmount = DEFAULT_MAXIMUM_PROCEEDS / halfOfEpoch + 1;
 
-    //     vm.warp(hook.getStartingTime() + hook.getEpochLength() * halfOfEpoch);
+    //     vm.warp(hook.startingTime() + hook.epochLength() * halfOfEpoch);
 
-    //     // vm.warp(hook.getStartingTime() + hook.getEpochLength()); // go to next epoch
+    //     // vm.warp(hook.startingTime() + hook.epochLength()); // go to next epoch
 
     //     // consecutive buy in each epoch
     //     for (uint256 i; i < halfOfEpoch; i++) {
@@ -549,7 +549,7 @@ contract V4PocTest is DopplerLensTest {
     //         console.log("isEarlyExit", hook.earlyExit());
     //         console.log("current epoch", hook.getCurrentEpoch());
 
-    //         vm.warp(hook.getStartingTime() + hook.getEpochLength() * (halfOfEpoch + i + 1)); // go to next epoch
+    //         vm.warp(hook.startingTime() + hook.epochLength() * (halfOfEpoch + i + 1)); // go to next epoch
     //     }
 
     //     vm.prank(hook.initializer());
@@ -564,7 +564,7 @@ contract V4PocTest is DopplerLensTest {
     //     _deployLensQuoter
     // {
     //     // Go to starting time
-    //     vm.warp(hook.getStartingTime());
+    //     vm.warp(hook.startingTime());
 
     //     (uint160 oriSqrtPriceX96,,,) = manager.getSlot0(key.toId());
 
@@ -572,18 +572,18 @@ contract V4PocTest is DopplerLensTest {
     //     console.log("ori token left in hook", IERC20(asset).balanceOf(address(hook)));
     //     console.log("ori token left in pool", IERC20(asset).balanceOf(address(manager)));
     //     console.log("ori sqrtPriceX96", oriSqrtPriceX96);
-    //     console.log("starting tick", hook.getStartingTick());
-    //     console.log("ending tick", hook.getEndingTick());
-    //     console.log("gamma", hook.getGamma());
+    //     console.log("starting tick", hook.startingTick());
+    //     console.log("ending tick", hook.endingTick());
+    //     console.log("gamma", hook.gamma());
 
     //     // no buys for N epochs
     //     uint256 totalEpochs = 360;
     //     uint256 halfOfEpoch = totalEpochs / 2;
     //     uint256 buyEthAmount = DEFAULT_MAXIMUM_PROCEEDS / halfOfEpoch + 1;
 
-    //     vm.warp(hook.getStartingTime() + hook.getEpochLength() * halfOfEpoch);
+    //     vm.warp(hook.startingTime() + hook.epochLength() * halfOfEpoch);
 
-    //     // vm.warp(hook.getStartingTime() + hook.getEpochLength()); // go to next epoch
+    //     // vm.warp(hook.startingTime() + hook.epochLength()); // go to next epoch
 
     //     // consecutive buy in each epoch
     //     for (uint256 i; i < halfOfEpoch; i++) {
@@ -621,7 +621,7 @@ contract V4PocTest is DopplerLensTest {
     //         console.log("isEarlyExit", hook.earlyExit());
     //         console.log("current epoch", hook.getCurrentEpoch());
 
-    //         vm.warp(hook.getStartingTime() + hook.getEpochLength() * (halfOfEpoch + i + 1)); // go to next epoch
+    //         vm.warp(hook.startingTime() + hook.epochLength() * (halfOfEpoch + i + 1)); // go to next epoch
     //     }
 
     //     vm.prank(hook.initializer());
