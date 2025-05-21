@@ -94,7 +94,7 @@ abstract contract DeployScript is Script {
             _toMarkdownLink(_scriptData.explorerUrl, address(uniswapV2Migrator)),
             " |\n",
             "| CustomLPUniswapV2Migrator | ",
-            _toMarkdownLink(scriptData.explorerUrl, address(customMigrator)),
+            _toMarkdownLink(_scriptData.explorerUrl, address(customMigrator)),
             " |\n"
         );
 
