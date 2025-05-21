@@ -65,7 +65,7 @@ contract BaseTest is Test, Deployers {
     int24 constant DEFAULT_TICK_SPACING = 8;
     uint256 constant DEFAULT_NUM_PD_SLUGS = 10;
 
-    int24 constant DEFAULT_START_TICK = -172_976;
+    int24 constant DEFAULT_START_TICK = -174_312;
     int24 constant DEFAULT_END_TICK = 186_840;
     // int24 constant DEFAULT_END_TICK = 195_000;
 
