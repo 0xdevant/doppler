@@ -8,13 +8,13 @@ import { IUniswapV2Factory, IUniswapV2Router02 } from "src/UniswapV2Migrator.sol
 contract V4DeployContract is Script {
     function run() public {
         // TODO: change after official airlock is deployed
-        address airlock = 0xAa7f55aB611Ea07A6D4F4D58a05F4338C52e494b;
+        address airlock = 0x660eAaEdEBc968f8f3694354FA8EC0b4c5Ba8D12;
         address uniswapV2Factory = 0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6;
         address uniswapV2Router02 = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
         // TODO: finalize after official airlock is deployed
-        address owner = 0xCCF7582371b4d6e3a77FFD423D1E9500EBD041Ac;
+        address owner = 0xDc04f489d8497F850F6729cE23BF10670e903aEa;
 
-        bytes32 salt = bytes32(abi.encodePacked("LONG"));
+        bytes32 salt = bytes32(uint256(1));
 
         vm.startBroadcast();
 
