@@ -10,7 +10,8 @@ contract DeployBaseSepolia is DeployScript {
             deployLens: true,
             explorerUrl: "https://base.blockscout.com/address/",
             poolManager: 0x498581fF718922c3f8e6A244956aF099B2652b2b,
-            protocolOwner: 0xCCF7582371b4d6e3a77FFD423D1E9500EBD041Ac,
+            // TODO: confirm the final owner for PRODUCTION
+            protocolOwner: 0xDc04f489d8497F850F6729cE23BF10670e903aEa,
             quoterV2: 0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a,
             uniswapV2Factory: 0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6,
             uniswapV2Router02: 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24,
