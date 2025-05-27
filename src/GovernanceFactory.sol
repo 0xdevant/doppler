@@ -6,7 +6,6 @@ import { Governance, IVotes } from "src/Governance.sol";
 import { IGovernanceFactory } from "src/interfaces/IGovernanceFactory.sol";
 import { ImmutableAirlock } from "src/base/ImmutableAirlock.sol";
 
-/// @custom:security-contact security@whetstone.cc
 contract GovernanceFactory is IGovernanceFactory, ImmutableAirlock {
     TimelockFactory public immutable timelockFactory;
 

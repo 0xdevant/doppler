@@ -14,9 +14,7 @@ import { UniswapV2Locker } from "src/UniswapV2Locker.sol";
 import { ImmutableAirlock } from "src/base/ImmutableAirlock.sol";
 
 /**
- * @author Whetstone Research
  * @notice Takes care of migrating liquidity into a Uniswap V2 pool
- * @custom:security-contact security@whetstone.cc
  */
 contract UniswapV2Migrator is ILiquidityMigrator, ImmutableAirlock {
     using SafeTransferLib for ERC20;

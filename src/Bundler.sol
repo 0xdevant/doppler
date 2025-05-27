@@ -12,10 +12,6 @@ error InvalidAddresses();
 /// @dev Thrown when the asset address doesn't match the predicted one
 error InvalidOutputToken();
 
-/**
- * @author Whetstone
- * @custom:security-contact security@whetstone.cc
- */
 contract Bundler {
     /// @notice Address of the Airlock contract
     Airlock public immutable airlock;

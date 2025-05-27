@@ -62,7 +62,6 @@ struct VestingData {
     uint256 releasedAmount;
 }
 
-/// @custom:security-contact security@whetstone.cc
 contract DERC20 is ERC20, ERC20Votes, ERC20Permit, Ownable {
     /// @notice Timestamp of the start of the vesting period
     uint256 public immutable vestingStart;

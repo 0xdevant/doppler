@@ -112,7 +112,6 @@ event SetModuleState(address indexed module, ModuleState indexed state);
  */
 event Collect(address indexed to, address indexed token, uint256 amount);
 
-/// @custom:security-contact security@whetstone.cc
 contract Airlock is Ownable {
     using SafeTransferLib for ERC20;
 

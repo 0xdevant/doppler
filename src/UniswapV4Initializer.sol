@@ -63,7 +63,6 @@ contract DopplerDeployer {
 /**
  * @title Uniswap V4 Initializer
  * @notice Initializes a Uniswap V4 pool with an associated Doppler contract as a hook
- * @custom:security-contact security@whetstone.cc
  */
 contract UniswapV4Initializer is IPoolInitializer, ImmutableAirlock {
     using CurrencyLibrary for Currency;

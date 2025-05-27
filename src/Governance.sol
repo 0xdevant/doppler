@@ -13,7 +13,6 @@ import { IVotes } from "@openzeppelin/governance/utils/IVotes.sol";
 /// @notice Thrown if propose is called before the proposal period starts.
 error ProposalPeriodNotStarted();
 
-/// @custom:security-contact security@whetstone.cc
 contract Governance is
     Governor,
     GovernorSettings,

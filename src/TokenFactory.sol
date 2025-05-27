@@ -5,7 +5,6 @@ import { ITokenFactory } from "src/interfaces/ITokenFactory.sol";
 import { DERC20 } from "src/DERC20.sol";
 import { ImmutableAirlock } from "src/base/ImmutableAirlock.sol";
 
-/// @custom:security-contact security@whetstone.cc
 contract TokenFactory is ITokenFactory, ImmutableAirlock {
     constructor(
         address airlock_
