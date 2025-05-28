@@ -183,7 +183,7 @@ abstract contract DeployScript is Script {
         airlock.setModuleState(modules, states);
 
         // Transfer ownership to the actual protocol owner
-        // airlock.transferOwnership(scriptData.protocolOwner);
+        airlock.transferOwnership(scriptData.protocolOwner);
     }
 
     function _deployBundler(ScriptData memory scriptData, Airlock airlock) internal returns (Bundler bundler) {

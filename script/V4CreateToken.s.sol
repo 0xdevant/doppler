@@ -28,15 +28,14 @@ struct Params {
     address weth;
 }
 
-string constant NAME = "WL_LONG";
-string constant SYMBOL = "WL_LONG";
+string constant NAME = "TL";
+string constant SYMBOL = "TEST";
 string constant TOKEN_URI = "https://ipfs.io/ipfs/QmNcnhCp2P1sM7K44aBhzcdDGAhS4Jvagqofi5Cfs46n6d";
 
 uint256 constant INITIAL_SUPPLY = 1_000_000_000 ether;
-uint256 constant MAX_SHARE_TO_BE_SOLD = 0.9 ether;
 
 uint256 constant DEFAULT_MINIMUM_PROCEEDS = 6.65 ether;
-uint256 constant DEFAULT_MAXIMUM_PROCEEDS = 9.2 ether;
+uint256 constant DEFAULT_MAXIMUM_PROCEEDS = 10 ether;
 
 uint256 constant SALE_DURATION = 6 hours;
 uint256 constant DEFAULT_EPOCH_LENGTH = 200 seconds;
@@ -44,23 +43,23 @@ uint256 constant DEFAULT_NUM_PD_SLUGS = 10;
 
 int24 constant DEFAULT_START_TICK = 175_848;
 int24 constant DEFAULT_END_TICK = 186_840;
-int24 constant DEFAULT_TICK_SPACING = 8;
+int24 constant DEFAULT_TICK_SPACING = 2;
 int24 constant DEFAULT_GAMMA = 800;
 uint24 constant DEFAULT_FEE = 20_000;
 uint256 constant DEFAULT_NUM_TOKENS_TO_SELL = 600_000_000 ether;
 
 address constant UNISWAP_V4_POOL_MANAGER_BASE_SEPOLIA = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;
 address constant UNISWAP_V4_POOL_MANAGER_BASE = 0x498581fF718922c3f8e6A244956aF099B2652b2b;
-address constant LONG_INTEGRATOR = 0xCCF7582371b4d6e3a77FFD423D1E9500EBD041Ac;
+address constant LONG_INTEGRATOR = 0xDc04f489d8497F850F6729cE23BF10670e903aEa;
 
 contract V4CreateTokenScript is Script {
     function run() public {
         Params memory params = Params({
-            airlock: Airlock(payable(address(0xAa7f55aB611Ea07A6D4F4D58a05F4338C52e494b))),
-            tokenFactory: ITokenFactory(address(0x3cc915e3cee3fE5cfce02eDb86835AEe4F64d076)),
-            governanceFactory: IGovernanceFactory(address(0xA7a3b84EF1C52a442fCFaA02acaf8b1DF2DCE3b6)),
-            poolInitializer: IPoolInitializer(address(0x7727f8353A30f9753CF8bF7489dAF0ef038900bA)),
-            liquidityMigrator: ILiquidityMigrator(address(0x2c8afbc476421649215AD1eC1AE20345e2510dd5)),
+            airlock: Airlock(payable(address(0x7e5231c556D2Fbf470832Ff2EE1227bbaB54E418))),
+            tokenFactory: ITokenFactory(address(0xa8736A4c788cB16a5cc7Ba78514B093f073CB21f)),
+            governanceFactory: IGovernanceFactory(address(0x18a1333256893aB8a6207363E585BbD9D20a7964)),
+            poolInitializer: IPoolInitializer(address(0x88b067454Da0A6c83DA8174EC97725038756cafE)),
+            liquidityMigrator: ILiquidityMigrator(address(0xB5b932a48845B1BbEaDA48685010a43ca5e2E289)),
             weth: address(0x4200000000000000000000000000000000000006)
         });
         require(SALE_DURATION % DEFAULT_EPOCH_LENGTH == 0, "Sale duration must be divisible by epoch length");
@@ -83,7 +82,7 @@ contract V4CreateTokenScript is Script {
          * uint32 initialVotingPeriod,
          * uint256 initialProposalThreshold
          */
-        bytes memory governanceData = abi.encode(NAME, 7200, 50_400, INITIAL_SUPPLY / 1000);
+        bytes memory governanceData = abi.encode(NAME, 172_800, 1_209_600, 0);
 
         /**
          * Token factory data is encoded as follows:
@@ -127,7 +126,7 @@ contract V4CreateTokenScript is Script {
             DEFAULT_TICK_SPACING
         );
 
-        bytes memory liquidityMigratorData = abi.encode(0.05 ether, 0xCCF7582371b4d6e3a77FFD423D1E9500EBD041Ac, 30 days);
+        bytes memory liquidityMigratorData = abi.encode(0.05 ether, 0xDc04f489d8497F850F6729cE23BF10670e903aEa, 30 days);
 
         (bytes32 salt,,) = mineV4(
             MineV4Params({

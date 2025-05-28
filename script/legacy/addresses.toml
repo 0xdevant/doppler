@@ -26,7 +26,7 @@
 [8453]
 "deploy_bundler" = false
 "explorer_url" = "https://basescan.org/address/"
-"protocol_owner" = "0xCCF7582371b4d6e3a77FFD423D1E9500EBD041Ac"
+"protocol_owner" = "0xDc04f489d8497F850F6729cE23BF10670e903aEa"
 "quoter_v2" = "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a"
 "uniswap_v2_factory" = "0x8909dc15e40173ff4699343b6eb8132c65e18ec6"
 "uniswap_v2_router_02" = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24"

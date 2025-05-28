@@ -3,12 +3,12 @@ pragma solidity ^0.8.24;
 
 import { DeployScript, ScriptData } from "script/Deploy.s.sol";
 
-contract DeployBaseSepolia is DeployScript {
+contract DeployBase is DeployScript {
     function setUp() public override {
         _scriptData = ScriptData({
             deployBundler: true,
             deployLens: true,
-            explorerUrl: "https://base.blockscout.com/address/",
+            explorerUrl: "https://basescan.org/address/",
             poolManager: 0x498581fF718922c3f8e6A244956aF099B2652b2b,
             // TODO: confirm the final owner for PRODUCTION
             protocolOwner: 0xDc04f489d8497F850F6729cE23BF10670e903aEa,
