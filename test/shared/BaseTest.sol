@@ -52,6 +52,7 @@ contract BaseTest is Test, Deployers {
     uint256 constant DEFAULT_NUM_TOKENS_TO_SELL = 600_000_000 ether;
     uint256 constant DEFAULT_MINIMUM_PROCEEDS = 6.65 ether;
     uint256 constant DEFAULT_MAXIMUM_PROCEEDS = 10 ether;
+    uint256 constant SALE_DURATION = 6 hours;
     uint256 constant DEFAULT_STARTING_TIME = 1 days;
     uint256 constant DEFAULT_ENDING_TIME = 1 days + 6 hours;
     int24 constant DEFAULT_GAMMA = 800;
