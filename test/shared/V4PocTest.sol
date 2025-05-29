@@ -49,8 +49,8 @@ contract V4PocTest is DopplerLensTest {
         uint256 totalEpochs = SALE_DURATION / DEFAULT_EPOCH_LENGTH;
 
         uint256 HIGH_DEMAND_BUY_AMOUNT = 1 ether;
-        uint256 HIGH_DEMAND_EPOCHS = 6;
-        uint256 BUY_ETH_AMOUNT = 1 ether;
+        uint256 HIGH_DEMAND_EPOCHS = 3;
+        uint256 BUY_ETH_AMOUNT = 0.5 ether;
 
         uint256 totalEthProceeds;
         uint256 count = 1;
