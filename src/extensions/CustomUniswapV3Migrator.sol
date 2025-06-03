@@ -219,4 +219,8 @@ contract CustomUniswapV3Migrator is ILiquidityMigrator, ImmutableAirlock {
             SafeTransferLib.safeTransfer(token1, msg.sender, refund1);
         }
     }
+
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
 }
