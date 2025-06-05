@@ -4,54 +4,32 @@ pragma solidity ^0.8.24;
 import { SafeTransferLib, ERC20 } from "@solmate/utils/SafeTransferLib.sol";
 import { WETH as IWETH } from "@solmate/tokens/WETH.sol";
 import { TickMath } from "@v4-core/libraries/TickMath.sol";
-import { FullMath } from "@v4-core/libraries/FullMath.sol";
 import { IUniswapV3Factory } from "@v3-core/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@v3-core/interfaces/IUniswapV3Pool.sol";
-import { IUniswapV3MintCallback } from "@v3-core/interfaces/callback/IUniswapV3MintCallback.sol";
-import { INonfungiblePositionManager } from "@v3-periphery/interfaces/INonfungiblePositionManager.sol";
-import { IWETH9 } from "@v3-periphery/interfaces/external/IWETH9.sol";
-import { ILiquidityMigrator } from "src/interfaces/ILiquidityMigrator.sol";
+import { INonfungiblePositionManager } from "src/extensions/interfaces/INonfungiblePositionManager.sol";
+import { ICustomUniswapV3Migrator } from "src/extensions/interfaces/ICustomUniswapV3Migrator.sol";
 import { ISwapRouter02 } from "src/extensions/interfaces/ISwapRouter02.sol";
-import { MigrationMath } from "src/libs/MigrationMath.sol";
-import { CustomLPUniswapV2Locker } from "src/extensions/CustomLPUniswapV2Locker.sol";
+import { CustomLPUniswapV3Locker } from "src/extensions/CustomLPUniswapV3Locker.sol";
 import { ImmutableAirlock } from "src/base/ImmutableAirlock.sol";
 
 /**
- * @author ant from Long
+ * @author ant
  * @notice An extension built on top of UniswapV2Migrator to enable locking LP for a custom period
  */
-contract CustomUniswapV3Migrator is ILiquidityMigrator, ImmutableAirlock {
+contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
     using SafeTransferLib for ERC20;
 
     /// @dev Constant used to increase precision during calculations
     uint256 constant WAD = 1 ether;
-    /// @dev Maximum amount of liquidity that can be allocated to `lpAllocationRecipient` (% expressed in WAD i.e. max 5%)
-    uint256 constant MAX_CUSTOM_LP_WAD = 0.05 ether;
-    /// @dev Minimum lock up period for the custom LP allocation
-    uint256 public constant MIN_LOCK_PERIOD = 30 days;
+    uint256 constant MAX_SLIPPAGE_WAD = 0.05 ether; // 5% slippage
 
     INonfungiblePositionManager public immutable NONFUNGIBLE_POSITION_MANAGER;
     IUniswapV3Factory public immutable FACTORY;
-    IWETH9 public immutable WETH;
-    CustomLPUniswapV2Locker public immutable CUSTOM_LP_LOCKER;
+    IWETH public immutable WETH;
+    CustomLPUniswapV3Locker public immutable CUSTOM_V3_LOCKER;
+    uint24 public immutable FEE_TIER;
 
-    /// @dev Lock up period for the LP tokens allocated to `customLPRecipient`
-    uint32 public lockUpPeriod;
-    /// @dev Allow custom allocation of LP tokens other than `LP_TO_LOCK_WAD` (% expressed in WAD)
-    uint64 public customLPWad;
-    /// @dev Address of the recipient of the custom LP allocation
-    address public customLPRecipient;
-
-    uint24 public fee;
-
-    /// @notice Thrown when the custom LP allocation exceeds `MAX_CUSTOM_LP_WAD`
-    error MaxCustomLPWadExceeded();
-    /// @notice Thrown when the recipient is not an EOA
-    error RecipientNotEOA();
-    /// @notice Thrown when the lock up period is less than `MIN_LOCK_PERIOD`
-    error LessThanMinLockPeriod();
-    /// @notice Thrown when the input is zero
-    error InvalidInput();
+    mapping(address pool => address integratorFeeReceiver) public poolFeeReceivers;
 
     receive() external payable onlyAirlock { }
 
@@ -59,87 +37,47 @@ contract CustomUniswapV3Migrator is ILiquidityMigrator, ImmutableAirlock {
         address airlock_,
         INonfungiblePositionManager positionManager_,
         ISwapRouter02 router,
-        address owner
+        address owner,
+        address dopplerFeeReceiver_,
+        uint24 feeTier_
     ) ImmutableAirlock(airlock_) {
         NONFUNGIBLE_POSITION_MANAGER = positionManager_;
-        FACTORY = router.factory();
-        WETH = IWETH9(router.WETH9());
-        CUSTOM_LP_LOCKER = new CustomLPUniswapV2Locker(airlock_, FACTORY, this, owner);
+        FACTORY = IUniswapV3Factory(router.factory());
+        WETH = IWETH(payable(router.WETH9()));
+        CUSTOM_V3_LOCKER = new CustomLPUniswapV3Locker(airlock_, FACTORY, this, owner, dopplerFeeReceiver_);
+        FEE_TIER = feeTier_;
     }
 
     function initialize(
         address asset,
         address numeraire,
-        uint256 totalTokensOnBondingCurve,
-        bytes32,
         bytes calldata liquidityMigratorData
     ) external onlyAirlock returns (address pool) {
-        if (liquidityMigratorData.length > 0) {
-            (uint24 fee_, uint64 customLPWad_, address customLPRecipient_, uint32 lockUpPeriod_) =
-                abi.decode(liquidityMigratorData, (uint24, uint64, address, uint32));
-            require(customLPWad_ > 0 && customLPRecipient_ != address(0), InvalidInput());
-            require(customLPWad_ <= MAX_CUSTOM_LP_WAD, MaxCustomLPWadExceeded());
-            // initially only allow EOA to receive the lp allocation
-            require(customLPRecipient_.code.length == 0, RecipientNotEOA());
-            require(lockUpPeriod_ >= MIN_LOCK_PERIOD, LessThanMinLockPeriod());
+        require(liquidityMigratorData.length > 0, EmptyLiquidityMigratorData());
 
-            int24 tickSpacing = FACTORY.feeAmountTickSpacing(fee);
-            if (tickSpacing == 0) revert InvalidFee(fee);
-
-            customLPWad = customLPWad_;
-            customLPRecipient = customLPRecipient_;
-            lockUpPeriod = lockUpPeriod_;
-            fee = fee_;
-        }
-
-        // InitData memory initData = abi.decode(data, (InitData));
-        // (uint24 fee, int24 tickLower, int24 tickUpper, uint16 numPositions, uint256 maxShareToBeSold) =
-        //     (initData.fee, initData.tickLower, initData.tickUpper, initData.numPositions, initData.maxShareToBeSold);
-
-        // require(maxShareToBeSold <= WAD, MaxShareToBeSoldExceeded(maxShareToBeSold, WAD));
-        // require(tickLower < tickUpper, InvalidTickRangeMisordered(tickLower, tickUpper));
-
-        // checkPoolParams(tickLower, tickSpacing);
-        // checkPoolParams(tickUpper, tickSpacing);
+        (address integratorFeeReceiver) = abi.decode(liquidityMigratorData, (address));
+        require(integratorFeeReceiver != address(0), ZeroFeeReceiverAddress());
+        poolFeeReceivers[pool] = integratorFeeReceiver;
 
         (address token0, address token1) = asset < numeraire ? (asset, numeraire) : (numeraire, asset);
 
-        // uint256 numTokensToSell = FullMath.mulDiv(totalTokensOnBondingCurve, maxShareToBeSold, WAD);
-        // uint256 numTokensToBond = totalTokensOnBondingCurve - numTokensToSell;
-
-        pool = factory.getPool(token0, token1, fee);
-        // require(getState[pool].isInitialized == false, PoolAlreadyInitialized());
+        pool = FACTORY.getPool(token0, token1, FEE_TIER);
         if (pool == address(0)) {
-            pool = factory.createPool(token0, token1, fee);
+            pool = FACTORY.createPool(token0, token1, FEE_TIER);
         }
 
         bool isToken0 = asset == token0;
-        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(isToken0 ? tickLower : tickUpper);
 
-        // try IUniswapV3Pool(pool).initialize(sqrtPriceX96) { } catch { }
+        int24 tickSpacing = FACTORY.feeAmountTickSpacing(FEE_TIER);
+        int24 lowerTick = (TickMath.MIN_TICK / tickSpacing) * tickSpacing;
+        int24 upperTick = (TickMath.MAX_TICK / tickSpacing) * tickSpacing;
+        _checkTickDivisible(lowerTick, tickSpacing);
+        _checkTickDivisible(upperTick, tickSpacing);
+        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(isToken0 ? lowerTick : upperTick);
+
         IUniswapV3Pool(pool).initialize(sqrtPriceX96);
 
-        // getState[pool] = PoolState({
-        //     asset: asset,
-        //     numeraire: numeraire,
-        //     tickLower: tickLower,
-        //     tickUpper: tickUpper,
-        //     isInitialized: true,
-        //     isExited: false,
-        //     numPositions: numPositions,
-        //     maxShareToBeSold: maxShareToBeSold,
-        //     totalTokensOnBondingCurve: totalTokensOnBondingCurve
-        // });
-
-        // (LpPosition[] memory lbpPositions, uint256 reserves) =
-        //     calculateLogNormalDistribution(tickLower, tickUpper, tickSpacing, isToken0, numPositions, numTokensToSell);
-
-        // lbpPositions[numPositions] =
-        //     calculateLpTail(numPositions, tickLower, tickUpper, isToken0, reserves, numTokensToBond, tickSpacing);
-
-        // mintPositions(asset, numeraire, fee, pool, lbpPositions, numPositions);
-
-        emit Create(pool, asset, numeraire);
+        return pool;
     }
 
     /**
@@ -147,14 +85,23 @@ contract CustomUniswapV3Migrator is ILiquidityMigrator, ImmutableAirlock {
      * @param sqrtPriceX96 Square root price of the pool as a Q64.96 value
      * @param token0 Smaller address of the two tokens
      * @param token1 Larger address of the two tokens
-     * @param recipient Address receiving the liquidity pool tokens
+     * @param recipient Address receiving the liquidity pool tokens i.e. timelock
      */
     function migrate(
         uint160 sqrtPriceX96,
         address token0,
         address token1,
         address recipient
-    ) external payable onlyAirlock returns (uint256 liquidity) {
+    ) external payable onlyAirlock returns (uint256) {
+        address pool = FACTORY.getPool(token0, token1, FEE_TIER);
+        require(pool != address(0), PoolDoesNotExist());
+
+        // if the pool is not initialized, initialize it with the given sqrtPriceX96
+        (uint160 currentSqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+        if (currentSqrtPriceX96 == 0) {
+            IUniswapV3Pool(pool).initialize(sqrtPriceX96);
+        }
+
         uint256 balance0;
         uint256 balance1 = ERC20(token1).balanceOf(address(this));
 
@@ -171,56 +118,74 @@ contract CustomUniswapV3Migrator is ILiquidityMigrator, ImmutableAirlock {
             (balance0, balance1) = (balance1, balance0);
         }
 
+        int24 tickSpacing = FACTORY.feeAmountTickSpacing(FEE_TIER);
+        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        // int24 lowerTick = (TickMath.MIN_TICK / tickSpacing) * tickSpacing;
+        // int24 upperTick = (TickMath.MAX_TICK / tickSpacing) * tickSpacing;
+        int24 lowerTick = (currentTick / tickSpacing) * tickSpacing;
+        int24 upperTick = (currentTick + tickSpacing) / tickSpacing * tickSpacing; // Math.ceil(currentTick / tickSpacing) * tickSpacing;
+        _checkTickDivisible(lowerTick, tickSpacing);
+        _checkTickDivisible(upperTick, tickSpacing);
+        // require(currentTick >= lowerTick && currentTick <= upperTick, TickOutOfRange(currentTick, lowerTick, upperTick));
+
         // Approve the position manager
-        SafeTransferLib.safeApprove(token0, address(NONFUNGIBLE_POSITION_MANAGER), balance0);
-        SafeTransferLib.safeApprove(token1, address(NONFUNGIBLE_POSITION_MANAGER), balance1);
+        ERC20(token0).safeApprove(address(NONFUNGIBLE_POSITION_MANAGER), balance0);
+        ERC20(token1).safeApprove(address(NONFUNGIBLE_POSITION_MANAGER), balance1);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
             token0: token0,
             token1: token1,
-            fee: fee,
-            tickLower: TickMath.MIN_TICK,
-            tickUpper: TickMath.MAX_TICK,
+            fee: FEE_TIER,
+            tickLower: lowerTick,
+            tickUpper: upperTick,
             amount0Desired: balance0,
             amount1Desired: balance1,
-            amount0Min: 0,
-            amount1Min: 0,
+            amount0Min: balance0 * (WAD - MAX_SLIPPAGE_WAD) / WAD,
+            amount1Min: balance1 * (WAD - MAX_SLIPPAGE_WAD) / WAD,
             recipient: address(this),
-            deadline: block.timestamp
-        });
+            deadline: block.timestamp + 3600 // 1 hour
+         });
 
         // NOTE: the pool defined by token0/token1 must already be created and initialized in order to mint
         (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) =
             NONFUNGIBLE_POSITION_MANAGER.mint(params);
 
-        // Custom LP allocation: (n <= `MAX_CUSTOM_LP_WAD`)% to `customLPRecipient` after `lockUpPeriod`, rest will be sent to timelock
-        // liquidity = IUniswapV2Pair(pool).mint(address(this));
-        // uint256 customLiquidityToLock = liquidity * customLPWad / WAD;
-        // uint256 liquidityToTransfer = liquidity - customLiquidityToLock;
+        // Call to safeTransfer will trigger `onERC721Received` which must return the selector else transfer will fail
+        NONFUNGIBLE_POSITION_MANAGER.safeTransferFrom(address(this), address(CUSTOM_V3_LOCKER), tokenId);
+        CUSTOM_V3_LOCKER.register(tokenId, amount0, amount1, poolFeeReceivers[pool], recipient);
 
-        // IUniswapV2Pair(pool).transfer(recipient, liquidityToTransfer);
-        // IUniswapV2Pair(pool).transfer(address(CUSTOM_LP_LOCKER), customLiquidityToLock);
-        // CUSTOM_LP_LOCKER.receiveAndLock(pool, customLPRecipient, lockUpPeriod);
+        _refundDustAndRevokeAllowances(token0, token1, balance0, balance1, amount0, amount1, recipient);
 
-        // Remove allowance and refund in both assets.
+        return liquidity;
+    }
+
+    function _checkTickDivisible(int24 tick, int24 tickSpacing) internal pure {
+        if (tick % tickSpacing != 0) revert TickNotDivisible(tick, tickSpacing);
+    }
+
+    function _refundDustAndRevokeAllowances(
+        address token0,
+        address token1,
+        uint256 balance0,
+        uint256 balance1,
+        uint256 amount0,
+        uint256 amount1,
+        address recipient
+    ) internal {
         if (address(this).balance > 0) {
             SafeTransferLib.safeTransferETH(recipient, address(this).balance);
         }
 
         if (amount0 < balance0) {
-            SafeTransferLib.safeApprove(token0, address(NONFUNGIBLE_POSITION_MANAGER), 0);
+            ERC20(token0).safeApprove(address(NONFUNGIBLE_POSITION_MANAGER), 0);
             uint256 refund0 = balance0 - amount0;
-            SafeTransferLib.safeTransfer(token0, msg.sender, refund0);
+            ERC20(token0).safeTransfer(msg.sender, refund0);
         }
 
         if (amount1 < balance1) {
-            SafeTransferLib.safeApprove(token1, address(NONFUNGIBLE_POSITION_MANAGER), 0);
+            ERC20(token1).safeApprove(address(NONFUNGIBLE_POSITION_MANAGER), 0);
             uint256 refund1 = balance1 - amount1;
-            SafeTransferLib.safeTransfer(token1, msg.sender, refund1);
+            ERC20(token1).safeTransfer(msg.sender, refund1);
         }
-    }
-
-    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }
