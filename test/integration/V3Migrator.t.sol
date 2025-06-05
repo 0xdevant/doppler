@@ -21,7 +21,7 @@ import { CustomUniswapV3Migrator, ISwapRouter02 } from "src/extensions/CustomUni
 import { TokenFactory, ITokenFactory } from "src/TokenFactory.sol";
 import { GovernanceFactory, IGovernanceFactory } from "src/GovernanceFactory.sol";
 import { Doppler } from "src/Doppler.sol";
-import { CustomLPUniswapV3Locker } from "src/extensions/CustomLPUniswapV3Locker.sol";
+import { CustomUniswapV3Locker } from "src/extensions/CustomUniswapV3Locker.sol";
 import { INonfungiblePositionManager } from "src/extensions/interfaces/INonfungiblePositionManager.sol";
 import {
     UNISWAP_V3_NONFUNGIBLE_POSITION_MANAGER_BASE,

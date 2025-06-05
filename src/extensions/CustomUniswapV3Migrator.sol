@@ -9,7 +9,7 @@ import { IUniswapV3Pool } from "@v3-core/interfaces/IUniswapV3Pool.sol";
 import { INonfungiblePositionManager } from "src/extensions/interfaces/INonfungiblePositionManager.sol";
 import { ICustomUniswapV3Migrator } from "src/extensions/interfaces/ICustomUniswapV3Migrator.sol";
 import { ISwapRouter02 } from "src/extensions/interfaces/ISwapRouter02.sol";
-import { CustomLPUniswapV3Locker } from "src/extensions/CustomLPUniswapV3Locker.sol";
+import { CustomUniswapV3Locker } from "src/extensions/CustomUniswapV3Locker.sol";
 import { ImmutableAirlock } from "src/base/ImmutableAirlock.sol";
 
 /**
@@ -26,7 +26,7 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
     INonfungiblePositionManager public immutable NONFUNGIBLE_POSITION_MANAGER;
     IUniswapV3Factory public immutable FACTORY;
     IWETH public immutable WETH;
-    CustomLPUniswapV3Locker public immutable CUSTOM_V3_LOCKER;
+    CustomUniswapV3Locker public immutable CUSTOM_V3_LOCKER;
     uint24 public immutable FEE_TIER;
 
     mapping(address pool => address integratorFeeReceiver) public poolFeeReceivers;
@@ -44,7 +44,7 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
         NONFUNGIBLE_POSITION_MANAGER = positionManager_;
         FACTORY = IUniswapV3Factory(router.factory());
         WETH = IWETH(payable(router.WETH9()));
-        CUSTOM_V3_LOCKER = new CustomLPUniswapV3Locker(airlock_, FACTORY, this, owner, dopplerFeeReceiver_);
+        CUSTOM_V3_LOCKER = new CustomUniswapV3Locker(airlock_, FACTORY, this, owner, dopplerFeeReceiver_);
         FEE_TIER = feeTier_;
     }
 
@@ -55,9 +55,9 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
     ) external onlyAirlock returns (address pool) {
         require(liquidityMigratorData.length > 0, EmptyLiquidityMigratorData());
 
-        (address integratorFeeReceiver) = abi.decode(liquidityMigratorData, (address));
+        (int24 tickLower, int24 tickUpper, address integratorFeeReceiver) =
+            abi.decode(liquidityMigratorData, (int24, int24, address));
         require(integratorFeeReceiver != address(0), ZeroFeeReceiverAddress());
-        poolFeeReceivers[pool] = integratorFeeReceiver;
 
         (address token0, address token1) = asset < numeraire ? (asset, numeraire) : (numeraire, asset);
 
@@ -65,15 +65,14 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
         if (pool == address(0)) {
             pool = FACTORY.createPool(token0, token1, FEE_TIER);
         }
-
-        bool isToken0 = asset == token0;
+        poolFeeReceivers[pool] = integratorFeeReceiver;
 
         int24 tickSpacing = FACTORY.feeAmountTickSpacing(FEE_TIER);
-        int24 lowerTick = (TickMath.MIN_TICK / tickSpacing) * tickSpacing;
-        int24 upperTick = (TickMath.MAX_TICK / tickSpacing) * tickSpacing;
-        _checkTickDivisible(lowerTick, tickSpacing);
-        _checkTickDivisible(upperTick, tickSpacing);
-        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(isToken0 ? lowerTick : upperTick);
+        // int24 finalTickLower = _getDivisibleTick(tickLower, tickSpacing, false);
+        // int24 finalTickUpper = _getDivisibleTick(tickUpper, tickSpacing, true);
+        int24 lowerTick = TickMath.minUsableTick(tickSpacing);
+        int24 upperTick = TickMath.maxUsableTick(tickSpacing);
+        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(asset == token0 ? lowerTick : upperTick);
 
         IUniswapV3Pool(pool).initialize(sqrtPriceX96);
 
@@ -122,10 +121,9 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
         int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
         // int24 lowerTick = (TickMath.MIN_TICK / tickSpacing) * tickSpacing;
         // int24 upperTick = (TickMath.MAX_TICK / tickSpacing) * tickSpacing;
-        int24 lowerTick = (currentTick / tickSpacing) * tickSpacing;
-        int24 upperTick = (currentTick + tickSpacing) / tickSpacing * tickSpacing; // Math.ceil(currentTick / tickSpacing) * tickSpacing;
-        _checkTickDivisible(lowerTick, tickSpacing);
-        _checkTickDivisible(upperTick, tickSpacing);
+
+        int24 finalTickLower = _getDivisibleTick(currentTick, tickSpacing, false);
+        int24 finalTickUpper = _getDivisibleTick(currentTick, tickSpacing, true);
         // require(currentTick >= lowerTick && currentTick <= upperTick, TickOutOfRange(currentTick, lowerTick, upperTick));
 
         // Approve the position manager
@@ -136,8 +134,8 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
             token0: token0,
             token1: token1,
             fee: FEE_TIER,
-            tickLower: lowerTick,
-            tickUpper: upperTick,
+            tickLower: finalTickLower,
+            tickUpper: finalTickUpper,
             amount0Desired: balance0,
             amount1Desired: balance1,
             amount0Min: balance0 * (WAD - MAX_SLIPPAGE_WAD) / WAD,
@@ -159,8 +157,18 @@ contract CustomUniswapV3Migrator is ICustomUniswapV3Migrator, ImmutableAirlock {
         return liquidity;
     }
 
-    function _checkTickDivisible(int24 tick, int24 tickSpacing) internal pure {
-        if (tick % tickSpacing != 0) revert TickNotDivisible(tick, tickSpacing);
+    function _getDivisibleTick(int24 tick, int24 tickSpacing, bool isUpper) internal pure returns (int24 finalTick) {
+        finalTick = tick;
+
+        if (tick % tickSpacing != 0) {
+            if (isUpper) {
+                finalTick = (tick + tickSpacing) / tickSpacing * tickSpacing; // Math.ceil(currentTick / tickSpacing) * tickSpacing;
+            } else {
+                finalTick = (tick / tickSpacing) * tickSpacing;
+            }
+        }
+
+        if (tick == 0 && isUpper) finalTick = tickSpacing;
     }
 
     function _refundDustAndRevokeAllowances(
